@@ -32,6 +32,8 @@
 #ifdef USE_ESP32S3
 #include "BLE/ESP32S3/btle.hpp"
 #include "Display/ADA_ESP32_TFT/display.hpp"
+#include <Wire.h>
+#include <Adafruit_ADS7830.h>
 #endif
 
 #include "Sensors/genericSensor.hpp"
@@ -42,6 +44,9 @@ genericSensorClass genericSensor;
 BBDisplay bbDisplay;
 BBConfigClass config;
 char sensorData[10];
+#ifdef USE_ESP32S3
+Adafruit_ADS7830 ad7830;
+#endif
 
 //*********************************************
 //*
@@ -72,9 +77,23 @@ void setup()
     btle.init(tmpDeviceName);
     Serial.print("BTLE initialized => ");
     Serial.println(tmpDeviceName);
+
+#ifdef USE_ESP32S3
+    // initialize I2C broker
+    if (!ad7830.begin())
+    {
+        Serial.println("Failed to initialize ADS7830!");
+        while (1)
+            ;
+    }
+    Serial.println(" AD7830 OK!");
+#endif
+
     // initialize Sensors
+
     genericSensor.init(SENSOR_ACQUISITION_PERIOD_IN_MS);
     Serial.println("Sensors initialized");
+
     // initialize Display
     bbDisplay.init();
 
@@ -91,7 +110,11 @@ void loop()
     bbDisplay.checkButtons();
     if (genericSensor.scheduler->needToBeExecuted())
     {
+#ifdef USE_ESP32S3
+        int length = genericSensor.I2CAcquisition(sensorData, ad7830);
+#else
         int length = genericSensor.sensorAcquisition(sensorData);
+#endif
         btle.write(sensorData, length);
     }
     if (bbDisplay.scheduler->needToBeExecuted())

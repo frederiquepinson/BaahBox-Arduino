@@ -65,6 +65,14 @@ int genericSensorClass::lowpass(int value, int index)
 //*********************************************
 int genericSensorClass::init(unsigned long period)
 {
+      for (int i = 0; i < config.nbAnalogSensors; i++)
+    {
+        Serial.print("Pin");
+        Serial.print(i);
+        Serial.print(":");
+        Serial.println(config.analogInput[i]);
+    }
+
     for (int i = 0; i < config.nbAnalogSensors; i++)
     {
         Serial.print("Pin");
@@ -145,7 +153,67 @@ int genericSensorClass::sensorAcquisition(char *sensorDataFormatted)
     sensorDataFormatted[index] = 90;
     index++;
 
-#ifdef __DEBG__
+#ifdef __DEBUG__
+    char tmp2[2048] = "";
+    if (tmpDisplay++ > 10)
+    {
+        sprintf(tmp2, "%d %d %d %d", sensorDataFormatted[0] * 32 + sensorDataFormatted[1], sensorDataFormatted[2] * 32 + sensorDataFormatted[3], sensorDataFormatted[4], sensorDataFormatted[5]);
+        Serial.println(tmp2);
+        tmpDisplay = 0;
+    }
+#endif
+
+    return index;
+}
+
+int genericSensorClass::I2CAcquisition(char *sensorDataFormatted, Adafruit_ADS7830 ad7830)
+{
+    
+    // for (uint8_t ch = 0; ch <= 7; ch++) {
+    //     uint8_t value = ad7830.readADCsingle(ch);
+    //     Serial.print(value);
+    //     if (ch < 7) {
+    //       Serial.print(",\t");
+    //     }
+    //   }
+    //   Serial.println();
+    //   delay(100);
+
+      
+    
+    int index = 0;
+    // Analog input acquisition
+    for (int i = 0; i < config.nbAnalogSensors; i++)
+    {
+        int i2CToAnalog = map(ad7830.readADCsingle(i), 0, 255, 0, 1023);
+        int mapValue = lowpass(i2CToAnalog, i);
+#ifdef __ANALOG__JOYSTICK__
+        if (mapValue >= 440 && mapValue <= 550)
+        {
+            mapValue = 500;
+        }
+#endif
+        storedValues[i] = mapValue;
+        int a = mapValue / 32;
+        int b = mapValue - (a * 32);
+        sensorDataFormatted[index] = a;
+        index++;
+        sensorDataFormatted[index] = b;
+        index++;
+    }
+    // digital input acquisition
+    int c =
+        (1 - digitalRead(config.digitalInput[0])) * 8 +
+        (1 - digitalRead(config.digitalInput[1])) * 4 +
+        (1 - digitalRead(config.digitalInput[2])) * 2 +
+        1 - ad7830.readADCsingle(5);
+
+    sensorDataFormatted[index] = c;
+    index++;
+    sensorDataFormatted[index] = 90;
+    index++;
+
+#ifdef __DEBUG__
     char tmp2[2048] = "";
     if (tmpDisplay++ > 10)
     {

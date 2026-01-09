@@ -22,6 +22,8 @@
 
 #include "Config/BBConfig.hpp"
 #include "../BBScheduler.hpp"
+#include <Wire.h>
+#include <Adafruit_ADS7830.h>
 
 class genericSensorClass
 {
@@ -34,7 +36,7 @@ public:
   int memory[NB_ANALOG_SENSORS] = {};
   void getAnalogInputs(int *input1, int *input2);
   int sensorAcquisition(char *bleMessage);
-
+  int I2CAcquisition(char *bleMessage, Adafruit_ADS7830 ad7830);
   int storedValues[NB_ANALOG_SENSORS];
   BBScheduler *scheduler;
 
